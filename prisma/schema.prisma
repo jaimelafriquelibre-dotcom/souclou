@@ -1,0 +1,517 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SchoolStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum AcademicYearStatus {
+  PLANNED
+  ACTIVE
+  CLOSED
+}
+
+enum SchoolCycle {
+  PRESCHOOL
+  PRIMARY
+  LOWER_SECONDARY
+  UPPER_SECONDARY
+}
+
+enum StudentStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  WITHDRAWN
+  COMPLETED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum GuardianLinkStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum PublicationType {
+  NOTICE
+  EVENT
+  OFFICIAL_INFORMATION
+}
+
+enum PublicationStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+enum PublicationDecision {
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  ACCOUNT_APPROVED
+  PUBLICATION_APPROVAL_REQUIRED
+  PUBLICATION_DECISION
+  PUBLICATION_PUBLISHED
+  GUARDIAN_LINK_DECISION
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrganizationRole {
+  FOUNDER
+  TECHNICAL_ADMIN
+}
+
+enum SchoolRole {
+  STUDIES_DIRECTOR
+  EDUCATOR
+  ADMINISTRATIVE_STAFF
+  TEACHER
+  STUDENT
+  GUARDIAN
+}
+
+model User {
+  id                     String                  @id @default(cuid())
+  name                   String?
+  email                  String                  @unique
+  emailNormalized        String                  @unique
+  emailVerified          DateTime?
+  image                  String?
+  phone                  String?
+  status                 UserStatus              @default(PENDING)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  accounts               Account[]
+  sessions               Session[]
+  organizationMemberships OrganizationMembership[]
+  schoolMemberships      SchoolMembership[]
+  auditLogs              AuditLog[]              @relation("AuditActor")
+  attendanceRecords      AttendanceRecord[]      @relation("AttendanceRecorder")
+  guardianLinks          GuardianStudentLink[]   @relation("StudentGuardian")
+  teachingAssignments    ClassTeachingAssignment[]
+  gradeEntries           GradeEntry[]            @relation("GradeRecorder")
+  timetableSlots         TimetableSlot[]
+  publications           Publication[]           @relation("PublicationAuthor")
+  publicationApprovals   PublicationApproval[]   @relation("PublicationApprover")
+  notifications          Notification[]
+
+  @@index([status])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Organization {
+  id                     String                  @id @default(cuid())
+  name                   String
+  status                 OrganizationStatus      @default(ACTIVE)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  schools                School[]
+  memberships            OrganizationMembership[]
+  auditLogs              AuditLog[]
+}
+
+model School {
+  id             String             @id @default(cuid())
+  organizationId String
+  name           String
+  code           String
+  countryCode    String             @default("CI") @db.Char(2)
+  timeZone       String             @default("Africa/Abidjan")
+  status         SchoolStatus       @default(ACTIVE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  memberships    SchoolMembership[]
+  academicYears  AcademicYear[]
+  classGroups    ClassGroup[]
+  students       Student[]
+  attendanceRecords AttendanceRecord[]
+  guardianLinks     GuardianStudentLink[]
+  teachingAssignments ClassTeachingAssignment[]
+  timetableSlots   TimetableSlot[]
+  publicationPolicies PublicationPolicy[]
+  publications     Publication[]
+  notifications    Notification[]
+  auditLogs      AuditLog[]
+
+  @@unique([organizationId, code])
+  @@unique([id, organizationId])
+  @@index([organizationId, status])
+}
+
+model AcademicYear {
+  id         String            @id @default(cuid())
+  schoolId   String
+  label      String
+  startsOn   DateTime          @db.Date
+  endsOn     DateTime          @db.Date
+  status     AcademicYearStatus @default(PLANNED)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  school     School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  classGroups ClassGroup[]
+  enrollments Enrollment[]
+
+  @@unique([schoolId, label])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, startsOn])
+}
+
+model ClassGroup {
+  id             String      @id @default(cuid())
+  schoolId       String
+  academicYearId String
+  label          String
+  cycle          SchoolCycle
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  school         School      @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict)
+  enrollments    Enrollment[]
+  teachingAssignments ClassTeachingAssignment[]
+  gradeEntries   GradeEntry[]
+  timetableSlots TimetableSlot[]
+
+  @@unique([academicYearId, label])
+  @@unique([id, schoolId, academicYearId])
+  @@index([schoolId, academicYearId, cycle])
+}
+
+model Student {
+  id             String        @id @default(cuid())
+  schoolId       String
+  localReference String?
+  familyName     String
+  givenNames     String
+  status         StudentStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  school         School        @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  enrollments    Enrollment[]
+  guardianLinks  GuardianStudentLink[]
+
+  @@unique([id, schoolId])
+  @@unique([schoolId, localReference])
+  @@index([schoolId, status, familyName, givenNames])
+}
+
+model Enrollment {
+  id             String           @id @default(cuid())
+  studentId      String
+  schoolId       String
+  academicYearId String
+  classGroupId   String
+  status         EnrollmentStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  student        Student          @relation(fields: [studentId, schoolId], references: [id, schoolId], onDelete: Restrict)
+  academicYear   AcademicYear     @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict)
+  classGroup     ClassGroup       @relation(fields: [classGroupId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict)
+  attendanceRecords AttendanceRecord[]
+  gradeEntries   GradeEntry[]
+
+  @@unique([studentId, academicYearId])
+  @@unique([id, schoolId])
+  @@unique([id, schoolId, classGroupId, academicYearId])
+  @@index([schoolId, academicYearId, classGroupId, status])
+}
+
+model AttendanceRecord {
+  id              String           @id @default(cuid())
+  enrollmentId    String
+  schoolId        String
+  recordedByUserId String
+  attendanceDate  DateTime         @db.Date
+  status          AttendanceStatus
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  enrollment      Enrollment       @relation(fields: [enrollmentId, schoolId], references: [id, schoolId], onDelete: Restrict)
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  recordedBy      User             @relation("AttendanceRecorder", fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([enrollmentId, attendanceDate])
+  @@index([schoolId, attendanceDate, status])
+}
+
+model GuardianStudentLink {
+  id              String            @id @default(cuid())
+  guardianUserId  String
+  studentId       String
+  schoolId        String
+  status          GuardianLinkStatus @default(PENDING)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  guardian        User               @relation("StudentGuardian", fields: [guardianUserId], references: [id], onDelete: Restrict)
+  student         Student            @relation(fields: [studentId, schoolId], references: [id, schoolId], onDelete: Restrict)
+  school          School             @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+
+  @@unique([guardianUserId, studentId])
+  @@index([schoolId, studentId, status])
+  @@index([guardianUserId, status])
+}
+
+model ClassTeachingAssignment {
+  id             String      @id @default(cuid())
+  teacherUserId  String
+  schoolId       String
+  academicYearId String
+  classGroupId   String
+  subject        String               @db.VarChar(80)
+  createdAt      DateTime    @default(now())
+  teacher        User        @relation(fields: [teacherUserId], references: [id], onDelete: Restrict)
+  school         School      @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  classGroup     ClassGroup  @relation(fields: [classGroupId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict)
+  gradeEntries   GradeEntry[]
+  timetableSlots TimetableSlot[]
+
+  @@unique([teacherUserId, classGroupId, subject])
+  @@unique([id, schoolId, classGroupId, academicYearId, subject], map: "ClassTeachingAssignment_scope_subject_key")
+  @@unique([id, schoolId, classGroupId, academicYearId, subject, teacherUserId], map: "ClassTeachingAssignment_scope_subject_teacher_key")
+  @@index([schoolId, academicYearId, classGroupId])
+}
+
+model GradeEntry {
+  id             String                @id @default(cuid())
+  enrollmentId   String
+  schoolId       String
+  academicYearId String
+  classGroupId   String
+  assignmentId   String
+  recordedByUserId String
+  subject        String                @db.VarChar(80)
+  assessmentLabel String               @db.VarChar(120)
+  score          Decimal               @db.Decimal(8, 2)
+  maximumScore   Decimal               @db.Decimal(8, 2)
+  assessedOn     DateTime              @db.Date
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  enrollment     Enrollment            @relation(fields: [enrollmentId, schoolId, classGroupId, academicYearId], references: [id, schoolId, classGroupId, academicYearId], onDelete: Restrict)
+  classGroup     ClassGroup            @relation(fields: [classGroupId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict)
+  assignment     ClassTeachingAssignment @relation(fields: [assignmentId, schoolId, classGroupId, academicYearId, subject], references: [id, schoolId, classGroupId, academicYearId, subject], onDelete: Restrict)
+  recordedBy     User                  @relation("GradeRecorder", fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([enrollmentId, subject, assessmentLabel])
+  @@index([schoolId, academicYearId, classGroupId, subject])
+}
+
+model TimetableSlot {
+  id             String                @id @default(cuid())
+  schoolId       String
+  academicYearId String
+  classGroupId   String
+  assignmentId   String
+  teacherUserId  String
+  subject        String                @db.VarChar(80)
+  weekday        Weekday
+  startsAt       String                @db.VarChar(5)
+  endsAt         String                @db.VarChar(5)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  school         School                @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  classGroup     ClassGroup            @relation(fields: [classGroupId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict)
+  assignment     ClassTeachingAssignment @relation(fields: [assignmentId, schoolId, classGroupId, academicYearId, subject, teacherUserId], references: [id, schoolId, classGroupId, academicYearId, subject, teacherUserId], onDelete: Restrict)
+  teacher        User                  @relation(fields: [teacherUserId], references: [id], onDelete: Restrict)
+
+  @@index([schoolId, academicYearId, weekday, startsAt])
+  @@index([teacherUserId, weekday, startsAt])
+}
+
+model PublicationPolicy {
+  id                String          @id @default(cuid())
+  schoolId          String
+  type              PublicationType
+  requiredApprovals Int
+  approverRoles     SchoolRole[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  school            School          @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  publications      Publication[]
+
+  @@unique([schoolId, type])
+  @@unique([id, schoolId])
+}
+
+model Publication {
+  id          String           @id @default(cuid())
+  schoolId    String
+  policyId    String
+  authorUserId String
+  type        PublicationType
+  status      PublicationStatus @default(DRAFT)
+  title       String
+  body        String            @db.Text
+  publishedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  school      School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  policy      PublicationPolicy @relation(fields: [policyId, schoolId], references: [id, schoolId], onDelete: Restrict)
+  author      User              @relation("PublicationAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  approvals   PublicationApproval[]
+
+  @@index([schoolId, status, createdAt])
+}
+
+model PublicationApproval {
+  id             String              @id @default(cuid())
+  publicationId  String
+  approverUserId String
+  decision       PublicationDecision
+  comment        String?             @db.VarChar(500)
+  createdAt      DateTime            @default(now())
+  publication    Publication        @relation(fields: [publicationId], references: [id], onDelete: Restrict)
+  approver       User               @relation("PublicationApprover", fields: [approverUserId], references: [id], onDelete: Restrict)
+
+  @@unique([publicationId, approverUserId])
+  @@index([publicationId, decision])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  schoolId  String
+  type      NotificationType
+  title     String           @db.VarChar(160)
+  body      String           @db.VarChar(500)
+  href      String           @db.VarChar(500)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school    School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([schoolId, createdAt])
+}
+
+model OrganizationMembership {
+  id             String           @id @default(cuid())
+  userId         String
+  organizationId String
+  role           OrganizationRole
+  status         MembershipStatus @default(PENDING)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  user           User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, organizationId, role])
+  @@index([organizationId, status, role])
+}
+
+model SchoolMembership {
+  id        String           @id @default(cuid())
+  userId    String
+  schoolId  String
+  role      SchoolRole
+  status    MembershipStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  school    School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, schoolId, role])
+  @@index([schoolId, status, role])
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  schoolId       String?
+  actorUserId    String?
+  action         String
+  entityType     String
+  entityId       String?
+  before         Json?
+  after          Json?
+  reason         String?      @db.Text
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  school         School?      @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  actor          User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, createdAt])
+  @@index([schoolId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId])
+}
