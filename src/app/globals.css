@@ -20,8 +20,8 @@
   --control-surface: rgb(7 17 31 / 76%);
   --control-border: rgb(148 163 184 / 26%);
   --control-radius: 10px;
-  --action-fill: linear-gradient(105deg, #0f9f92, #0879aa 55%, #7048c8);
-  --action-shadow: 0 8px 24px rgb(14 165 160 / 17%);
+  --action-fill: linear-gradient(105deg, #5eead4, #38bdf8);
+  --action-shadow: 0 8px 26px rgb(34 211 238 / 28%);
 }
 
 @theme inline {
@@ -2303,9 +2303,10 @@ summary {
 }
 
 .publication-reject-button {
-  border-color: rgb(251 113 133 / 32%) !important;
-  background: rgb(190 24 93 / 12%);
-  color: #fda4af !important;
+  border-color: #fda4af !important;
+  background: linear-gradient(105deg, #be123c, #9f1239) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 24px rgb(190 24 93 / 24%);
   transition: transform 160ms ease, background 160ms ease;
 }
 
@@ -2569,7 +2570,7 @@ main .publication-secondary-button {
   background: var(--action-fill) !important;
   padding: 10px 16px !important;
   box-shadow: var(--action-shadow) !important;
-  color: #f8fafc !important;
+  color: #073b4c !important;
   font-size: 14px !important;
   font-weight: 650 !important;
   line-height: 1.2;
@@ -2578,8 +2579,12 @@ main .publication-secondary-button {
 
 main button.publication-reject-button {
   min-height: 44px !important;
+  border: 1px solid #fda4af !important;
   border-radius: var(--control-radius) !important;
   padding: 10px 16px !important;
+  background: linear-gradient(105deg, #be123c, #9f1239) !important;
+  box-shadow: 0 8px 24px rgb(190 24 93 / 24%) !important;
+  color: #fff !important;
   font-size: 14px !important;
   font-weight: 650 !important;
 }
@@ -2595,7 +2600,17 @@ main .publication-secondary-button:hover {
 
 main button:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  border-color: #718096 !important;
+  background: #34495e !important;
+  box-shadow: none !important;
+  color: #f1f5f9 !important;
+  filter: none;
+  opacity: 1;
+}
+
+main :is(button, a):focus-visible {
+  outline: 3px solid #67e8f9;
+  outline-offset: 3px;
 }
 
 @media (max-width: 640px) {
