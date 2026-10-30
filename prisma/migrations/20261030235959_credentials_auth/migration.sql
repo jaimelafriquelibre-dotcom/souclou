@@ -7,5 +7,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key"
 ON "User"("username");
 
 CREATE UNIQUE INDEX IF NOT EXISTS "User_usernameNormalized_key"
-ON "User"("usernameNormalized")
-WHERE "usernameNormalized" IS NOT NULL;
+ON "User"("usernameNormalized");
