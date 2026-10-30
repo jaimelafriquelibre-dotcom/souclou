@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth } from "../../../auth";
+import { signOutAction } from "@/app/portail/actions";
 
 export default function PendingAccountPage() {
   return (
@@ -43,6 +44,14 @@ async function PendingAccountContent() {
             Contactez un responsable de votre établissement pour obtenir de
             l’aide.
           </p>
+          <form action={signOutAction} className="mt-8">
+            <button
+              className="landing-cta inline-flex rounded-lg px-5 py-3 font-semibold text-white"
+              type="submit"
+            >
+              Déconnexion
+            </button>
+          </form>
         </section>
       </main>
     );
@@ -58,9 +67,17 @@ async function PendingAccountContent() {
           Activation en attente
         </h1>
         <p className="landing-description mx-auto mt-6 max-w-2xl text-lg leading-8">
-          Votre identité a été vérifiée. Un responsable doit encore approuver
-          votre compte et son périmètre avant tout accès aux données scolaires.
+          Votre compte a été créé. Un responsable doit approuver votre demande
+          d’accès avant toute consultation des données scolaires.
         </p>
+        <form action={signOutAction} className="mt-8">
+          <button
+            className="landing-cta inline-flex rounded-lg px-5 py-3 font-semibold text-white"
+            type="submit"
+          >
+            Déconnexion
+          </button>
+        </form>
       </section>
     </main>
   );

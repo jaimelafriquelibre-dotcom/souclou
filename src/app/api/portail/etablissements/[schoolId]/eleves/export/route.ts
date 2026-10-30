@@ -87,7 +87,10 @@ export async function GET(
       givenNames: true,
       status: true,
       enrollments: {
-        orderBy: { createdAt: "desc" },
+        orderBy: [
+          { academicYear: { startsOn: "desc" } },
+          { createdAt: "desc" },
+        ],
         take: 1,
         select: {
           status: true,
@@ -137,7 +140,10 @@ export async function GET(
               givenNames: true,
               status: true,
               enrollments: {
-                orderBy: { createdAt: "desc" },
+                orderBy: [
+                  { academicYear: { startsOn: "desc" } },
+                  { createdAt: "desc" },
+                ],
                 take: 1,
                 select: {
                   status: true,

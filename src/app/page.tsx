@@ -22,7 +22,7 @@ export default function HomePage() {
         </p>
         <p className="landing-note mt-10 inline-flex rounded-full border border-teal-200 bg-white px-4 py-2 text-sm font-medium text-teal-900">
           <span aria-hidden="true">✦</span>
-          Développement local · aucun dossier réel d’élève
+          Démonstration · données fictives uniquement
         </p>
         <div>
           <Link

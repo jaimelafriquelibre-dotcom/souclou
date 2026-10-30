@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { signOutAction } from "@/app/portail/actions";
 
 type PortalPageHeaderProps = {
   eyebrow: ReactNode;
@@ -24,7 +25,14 @@ export function PortalPageHeader({
           <p>{description}</p>
           {meta ? <p className="portal-page-header-meta">{meta}</p> : null}
         </div>
-        {action ? <div className="portal-page-header-action">{action}</div> : null}
+        <div className="portal-page-header-actions">
+          {action ? <div className="portal-page-header-action">{action}</div> : null}
+          <form action={signOutAction}>
+            <button className="portal-sign-out-button" type="submit">
+              Déconnexion
+            </button>
+          </form>
+        </div>
       </div>
     </header>
   );

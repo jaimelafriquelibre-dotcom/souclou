@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicationManagement } from "./publication-management";
+import { signOutAction } from "@/app/portail/actions";
 import { canUserPerformInSchool, canUserViewSchool } from "@/server/permissions";
 import { prisma } from "@/server/db";
 import { requireActiveUserId } from "@/server/session";
@@ -173,6 +174,11 @@ async function PublicationsPageContent({ params }: PublicationsPageProps) {
           <span aria-hidden="true">←</span> Retour au portail
         </Link>
         <header className="portal-page-header publication-hero">
+          <form action={signOutAction} className="publication-sign-out">
+            <button className="portal-sign-out-button" type="submit">
+              Déconnexion
+            </button>
+          </form>
           <div className="publication-hero-copy">
             <p className="publication-eyebrow">
               {school.organization.name} <span>·</span> Côte d’Ivoire
