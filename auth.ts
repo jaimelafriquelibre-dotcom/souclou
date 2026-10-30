@@ -7,6 +7,7 @@ import { prisma } from "@/server/db";
 
 const prismaAdapter = PrismaAdapter(prisma);
 const resendProvider = Resend({
+  apiKey: process.env.AUTH_RESEND_KEY,
   from: process.env.EMAIL_FROM,
   maxAge: 15 * 60,
 });
@@ -35,6 +36,8 @@ const invitationOnlyAdapter: Adapter = {
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
   adapter: invitationOnlyAdapter,
   providers: [rateLimitedResendProvider],
   session: { strategy: "jwt" },
