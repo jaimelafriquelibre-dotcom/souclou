@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: souclou
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    buildCommand: docker build -t souclou .
+    startCommand: sh -c "npx prisma migrate deploy && npm run start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AUTH_TRUST_HOST
+        value: true
+      - key: MAGIC_LINK_WINDOW_MS
+        value: 900000
+      - key: MAGIC_LINK_PER_EMAIL_LIMIT
+        value: 3
+      - key: MAGIC_LINK_GLOBAL_LIMIT
+        value: 300
+      - key: MAGIC_LINK_RETENTION_MS
+        value: 86400000

@@ -74,7 +74,11 @@ vérifié. `RESEND_TEST_TO` définit le destinataire de `npm.cmd run email:test`
 `BOOTSTRAP_NAME`, `BOOTSTRAP_ORGANIZATION`, `BOOTSTRAP_SCHOOL` et
 `BOOTSTRAP_SCHOOL_CODE` complètent la configuration. Ne jamais committer
 `.env.local`, un secret ou des données scolaires réelles. Utiliser uniquement
-des données fictives pour les développements et tests.
+des données fictives pour les développements et tests. Les variables
+`MAGIC_LINK_WINDOW_MS`, `MAGIC_LINK_PER_EMAIL_LIMIT`,
+`MAGIC_LINK_GLOBAL_LIMIT` et `MAGIC_LINK_RETENTION_MS` règlent les quotas du
+limiteur ; leurs valeurs d'exemple figurent dans `.env.example` et doivent être
+ajustées au trafic attendu et au plafond contractuel Resend.
 
 Générer `AUTH_SECRET` localement avant d'activer Auth.js :
 
@@ -136,10 +140,18 @@ retrait/rétablissement d'une inscription et l'archivage/restauration d'un
 élève ; l'archivage désactive les inscriptions et les liens familiaux actifs
 sans effacer l'historique.
 
-Le produit cible la Côte d'Ivoire, mais le pays d'hébergement et les obligations
-réglementaires applicables doivent faire l'objet d'une validation avant tout
-usage réel ou déploiement. La base locale et les migrations sont configurées
-dans l'environnement de développement. La base de production, la limitation
-des tentatives de connexion, les notifications externes, d'autres exports et
-les validations réglementaires restent à prévoir avant toute exploitation.
-Garder l'application locale et n'utiliser que des données fictives jusque-là.
+Le produit cible la Côte d'Ivoire. Les demandes de lien e-mail sont limitées à
+3 par adresse et par fenêtre de 15 minutes, avec un plafond global configurable
+(défaut : 300 par fenêtre) ; les clés stockées sont des HMAC et la table est
+nettoyée après 24 heures. Les
+headers de sécurité de base sont configurés dans Next.js. Une limitation par
+IP doit encore être activée au niveau du proxy/CDN de confiance choisi pour la
+production.
+
+Les décisions juridiques peuvent être établies hors du dépôt, mais leurs
+références, durées de conservation, bases légales, règles concernant les
+mineurs et transferts doivent être consignés avant de qualifier l'application
+de conforme. Le détail des entrées nécessaires et des opérations restant à
+configurer est suivi dans [docs/production-readiness.md](docs/production-readiness.md).
+En attendant leur intégration et le choix d'un hébergement validé, garder
+l'application locale et n'utiliser que des données fictives.

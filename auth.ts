@@ -2,9 +2,25 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { Adapter } from "next-auth/adapters";
 import NextAuth from "next-auth";
 import Resend from "next-auth/providers/resend";
+import { isMagicLinkRequestAllowed } from "@/server/magic-link-rate-limit";
 import { prisma } from "@/server/db";
 
 const prismaAdapter = PrismaAdapter(prisma);
+const resendProvider = Resend({
+  from: process.env.EMAIL_FROM,
+  maxAge: 15 * 60,
+});
+
+const rateLimitedResendProvider: ReturnType<typeof Resend> = {
+  ...resendProvider,
+  async sendVerificationRequest(params) {
+    if (!(await isMagicLinkRequestAllowed(params.identifier))) {
+      throw new Error("Magic link request limit exceeded.");
+    }
+
+    await resendProvider.sendVerificationRequest(params);
+  },
+};
 
 const invitationOnlyAdapter: Adapter = {
   ...prismaAdapter,
@@ -20,12 +36,7 @@ const invitationOnlyAdapter: Adapter = {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: invitationOnlyAdapter,
-  providers: [
-    Resend({
-      from: process.env.EMAIL_FROM,
-      maxAge: 15 * 60,
-    }),
-  ],
+  providers: [rateLimitedResendProvider],
   session: { strategy: "jwt" },
   pages: {
     signIn: "/connexion",

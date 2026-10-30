@@ -515,3 +515,12 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@index([entityType, entityId])
 }
+
+model MagicLinkRateLimit {
+  key             String   @id @db.VarChar(64)
+  attempts        Int
+  windowStartedAt DateTime
+  updatedAt       DateTime @updatedAt
+
+  @@index([updatedAt])
+}

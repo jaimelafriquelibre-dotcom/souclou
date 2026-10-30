@@ -22,6 +22,7 @@ export async function requestMagicLink(
   }
 
   if (
+    !process.env.AUTH_SECRET?.trim() ||
     !process.env.AUTH_RESEND_KEY?.trim() ||
     !process.env.EMAIL_FROM?.trim()
   ) {
@@ -40,7 +41,7 @@ export async function requestMagicLink(
     if (error instanceof AuthError) {
       return {
         error:
-          "Connexion indisponible. Vérifiez votre adresse ou contactez votre établissement.",
+          "Trop de demandes ou connexion indisponible. Réessayez plus tard.",
       };
     }
 
