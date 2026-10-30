@@ -8,7 +8,7 @@ en cours de construction. Aucune donnée réelle d'élève ne doit y être ajout
 - Next.js App Router, React et TypeScript strict
 - Tailwind CSS
 - PostgreSQL et Prisma
-- Auth.js avec liens temporaires via Resend
+- Auth.js avec identifiants utilisateur et validation manuelle du compte
 - ESLint, vérification TypeScript et Vitest
 - Interface française (`fr-CI`) et fuseau par défaut `Africa/Abidjan`
 
@@ -47,9 +47,9 @@ Prisma est généré automatiquement à l'installation.
 
 La première organisation et son fondateur se créent une seule fois après la
 migration. Renseigner les variables `BOOTSTRAP_*` décrites ci-dessous avant
-d'exécuter `db:bootstrap`. Le fondateur se connectera avec son adresse e-mail
-et un lien temporaire. L'opération est transactionnelle et refuse une base
-qui contient déjà une organisation.
+d'exécuter `db:bootstrap`. Le fondateur se connecte avec son nom
+d'utilisateur et son mot de passe. L'opération est transactionnelle et refuse
+une base qui contient déjà une organisation.
 
 ## Contrôles
 
@@ -64,21 +64,12 @@ npm.cmd run build
 
 ## Variables d'environnement
 
-Renseigner localement `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`,
-`AUTH_RESEND_KEY` et `EMAIL_FROM` pour activer la connexion par e-mail. Resend
-permet `onboarding@resend.dev` pour les essais vers une adresse de test
-autorisée ; pour les autres destinataires, configurer un domaine expéditeur
-vérifié. `RESEND_TEST_TO` définit le destinataire de `npm.cmd run email:test`
-(à défaut, `BOOTSTRAP_EMAIL` est utilisé). Pour le bootstrap,
-`BOOTSTRAP_EMAIL` doit être l'adresse du fondateur autorisé ;
-`BOOTSTRAP_NAME`, `BOOTSTRAP_ORGANIZATION`, `BOOTSTRAP_SCHOOL` et
-`BOOTSTRAP_SCHOOL_CODE` complètent la configuration. Ne jamais committer
-`.env.local`, un secret ou des données scolaires réelles. Utiliser uniquement
-des données fictives pour les développements et tests. Les variables
-`MAGIC_LINK_WINDOW_MS`, `MAGIC_LINK_PER_EMAIL_LIMIT`,
-`MAGIC_LINK_GLOBAL_LIMIT` et `MAGIC_LINK_RETENTION_MS` règlent les quotas du
-limiteur ; leurs valeurs d'exemple figurent dans `.env.example` et doivent être
-ajustées au trafic attendu et au plafond contractuel Resend.
+Renseigner localement `DATABASE_URL`, `AUTH_SECRET` et `AUTH_URL` pour activer
+la connexion par identifiants. Le bootstrap utilise `BOOTSTRAP_USERNAME`,
+`BOOTSTRAP_PASSWORD`, `BOOTSTRAP_EMAIL`, `BOOTSTRAP_NAME`,
+`BOOTSTRAP_ORGANIZATION`, `BOOTSTRAP_SCHOOL` et `BOOTSTRAP_SCHOOL_CODE`.
+Ne jamais committer `.env.local`, un secret ou des données scolaires réelles.
+Utiliser uniquement des données fictives pour les développements et tests.
 
 Générer `AUTH_SECRET` localement avant d'activer Auth.js :
 
@@ -107,18 +98,16 @@ contiennent pas les noms d'élèves. La migration initiale empêche les
 modifications/suppressions du journal et rattache chaque entrée d'établissement
 à la bonne organisation.
 
-Auth.js utilise exclusivement les liens temporaires envoyés par Resend.
-Créer le fondateur initial avec la commande de bootstrap ; les prochains
-comptes sont préinscrits par adresse e-mail et rattachés à une appartenance
-avant de pouvoir se connecter. À l'invitation d'un nouveau compte,
-l'administrateur renseigne son nom et son adresse e-mail ; l'approbation de
-l'appartenance reste obligatoire avant tout accès scolaire. Seul un fondateur
-peut attribuer les rôles de
 direction des études et d'éducateur, qui disposent du pouvoir d'approbation des
-comptes. L'identifiant transmis aux services d'autorisation doit provenir d'une
-session vérifiée côté serveur. Les lectures et écritures pédagogiques et
-familiales contrôlent également le périmètre d'établissement et les
-appartenances actives.
+Auth.js utilise des identifiants locaux sans e-mail ni SMS. Créer le
+fondateur initial avec la commande de bootstrap ; les comptes suivants sont
+créés par l'utilisateur avec nom d'utilisateur et mot de passe puis sont
+approuvés par l'administration avant d'accéder au portail. Seul un fondateur
+peut attribuer les rôles de direction des études et d'éducateur, qui disposent
+du pouvoir d'approbation des comptes. L'identifiant transmis aux services
+d'autorisation doit provenir d'une session vérifiée côté serveur. Les lectures
+et écritures pédagogiques et familiales contrôlent également le périmètre
+d'établissement et les appartenances actives.
 
 ## Sécurité et périmètre
 
@@ -140,13 +129,11 @@ retrait/rétablissement d'une inscription et l'archivage/restauration d'un
 élève ; l'archivage désactive les inscriptions et les liens familiaux actifs
 sans effacer l'historique.
 
-Le produit cible la Côte d'Ivoire. Les demandes de lien e-mail sont limitées à
-3 par adresse et par fenêtre de 15 minutes, avec un plafond global configurable
-(défaut : 300 par fenêtre) ; les clés stockées sont des HMAC et la table est
-nettoyée après 24 heures. Les
-headers de sécurité de base sont configurés dans Next.js. Une limitation par
-IP doit encore être activée au niveau du proxy/CDN de confiance choisi pour la
-production.
+Le produit cible la Côte d'Ivoire. Les identifiants sont stockés avec un hachage
+sécurisé et les comptes en attente d'approbation restent bloqués jusqu'à
+validation. Les headers de sécurité de base sont configurés dans Next.js. Une
+limitation par IP doit encore être activée au niveau du proxy/CDN de confiance
+choisi pour la production.
 
 Les décisions juridiques peuvent être établies hors du dépôt, mais leurs
 références, durées de conservation, bases légales, règles concernant les

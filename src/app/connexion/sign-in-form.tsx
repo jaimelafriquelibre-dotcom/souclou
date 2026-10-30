@@ -2,74 +2,160 @@
 
 import { useActionState } from "react";
 import {
-  requestMagicLink,
+  registerAccount,
+  signInWithCredentials,
   type SignInState,
 } from "@/app/connexion/actions";
 
 const initialState: SignInState = {};
 
 export function SignInForm() {
-  const [magicLinkState, magicLinkAction, magicLinkPending] = useActionState(
-    requestMagicLink,
+  const [signInState, signInAction, signInPending] = useActionState(
+    signInWithCredentials,
+    initialState,
+  );
+  const [registerState, registerAction, registerPending] = useActionState(
+    registerAccount,
     initialState,
   );
 
   return (
-    <section
-        aria-labelledby="email-sign-in-heading"
-        className="mx-auto mt-10 w-full max-w-4xl border-t border-slate-200/15 pt-8"
-      >
-        <h2
-          className="text-xl font-semibold text-[#eaf2fb]"
-          id="email-sign-in-heading"
-        >
-          Connexion par e-mail
+    <section className="mx-auto mt-10 grid w-full max-w-5xl gap-8 border-t border-slate-200/15 pt-8 lg:grid-cols-2">
+      <div>
+        <h2 className="text-xl font-semibold text-[#eaf2fb]" id="sign-in-heading">
+          Connexion
         </h2>
-        <form
-          action={magicLinkAction}
-          className="mx-auto mt-7 grid w-full gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
-        >
+        <form action={signInAction} className="mt-7 grid gap-5">
           <div>
             <label
               className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base"
-              htmlFor="magic-link-email"
+              htmlFor="sign-in-username"
             >
+              Nom d’utilisateur
+            </label>
+            <input
+              autoComplete="username"
+              className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
+              id="sign-in-username"
+              name="username"
+              required
+              type="text"
+            />
+          </div>
+          <div>
+            <label
+              className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base"
+              htmlFor="sign-in-password"
+            >
+              Mot de passe
+            </label>
+            <input
+              autoComplete="current-password"
+              className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
+              id="sign-in-password"
+              name="password"
+              required
+              type="password"
+            />
+          </div>
+          {signInState.error ? (
+            <p className="text-sm text-rose-300" role="alert">
+              {signInState.error}
+            </p>
+          ) : null}
+          {signInState.success ? (
+            <p aria-live="polite" className="text-sm text-teal-200" role="status">
+              {signInState.success}
+            </p>
+          ) : null}
+          <button
+            className="landing-cta flex min-h-14 w-full items-center justify-center rounded-lg px-6 py-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={signInPending}
+            type="submit"
+          >
+            {signInPending ? "Connexion…" : "Se connecter"}
+            <span aria-hidden="true">→</span>
+          </button>
+        </form>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold text-[#eaf2fb]" id="create-account-heading">
+          Créer un compte
+        </h2>
+        <form action={registerAction} className="mt-7 grid gap-5">
+          <div>
+            <label className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base" htmlFor="register-name">
+              Nom complet
+            </label>
+            <input
+              autoComplete="name"
+              className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
+              id="register-name"
+              name="name"
+              required
+              type="text"
+            />
+          </div>
+          <div>
+            <label className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base" htmlFor="register-username">
+              Nom d’utilisateur
+            </label>
+            <input
+              autoComplete="username"
+              className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
+              id="register-username"
+              name="username"
+              required
+              type="text"
+            />
+          </div>
+          <div>
+            <label className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base" htmlFor="register-email">
               Adresse e-mail
             </label>
             <input
               autoComplete="email"
               className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
-              id="magic-link-email"
+              id="register-email"
               name="email"
               required
               type="email"
             />
           </div>
-          {magicLinkState.error ? (
-            <p className="text-sm text-rose-300 md:col-span-2" role="alert">
-              {magicLinkState.error}
+          <div>
+            <label className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base" htmlFor="register-password">
+              Mot de passe
+            </label>
+            <input
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
+              id="register-password"
+              name="password"
+              required
+              type="password"
+            />
+          </div>
+          {registerState.error ? (
+            <p className="text-sm text-rose-300" role="alert">
+              {registerState.error}
             </p>
           ) : null}
-          {magicLinkState.success ? (
-            <p
-              aria-live="polite"
-              className="text-sm text-teal-200 md:col-span-2"
-              role="status"
-            >
-              {magicLinkState.success}
+          {registerState.success ? (
+            <p aria-live="polite" className="text-sm text-teal-200" role="status">
+              {registerState.success}
             </p>
           ) : null}
           <button
-            className="landing-cta flex min-h-14 w-full items-center justify-center rounded-lg px-6 py-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
-            disabled={magicLinkPending}
+            className="landing-cta flex min-h-14 w-full items-center justify-center rounded-lg px-6 py-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={registerPending}
             type="submit"
           >
-            {magicLinkPending
-              ? "Envoi en cours…"
-              : "Recevoir un lien temporaire"}
+            {registerPending ? "Création…" : "Créer mon compte"}
             <span aria-hidden="true">→</span>
           </button>
         </form>
-      </section>
+      </div>
+    </section>
   );
 }

@@ -22,8 +22,9 @@ export default function SignInPage() {
           Connexion sécurisée
         </h1>
         <p className="landing-description mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-          Saisissez l’adresse e-mail associée à votre compte autorisé pour
-          recevoir un lien temporaire de connexion.
+          Connectez-vous avec votre nom d’utilisateur et votre mot de passe.
+          Les comptes sont créés par l’utilisateur puis approuvés par
+          l’administration avant tout accès au portail.
         </p>
         <SignInForm />
       </section>

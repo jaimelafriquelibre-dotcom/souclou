@@ -1,52 +1,70 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import type { Adapter } from "next-auth/adapters";
 import NextAuth from "next-auth";
-import Resend from "next-auth/providers/resend";
-import { isMagicLinkRequestAllowed } from "@/server/magic-link-rate-limit";
+import Credentials from "next-auth/providers/credentials";
+import { normalizeUsername, verifyPassword } from "@/lib/password";
 import { prisma } from "@/server/db";
-
-const prismaAdapter = PrismaAdapter(prisma);
-const resendProvider = Resend({
-  apiKey: process.env.AUTH_RESEND_KEY,
-  from: process.env.EMAIL_FROM,
-  maxAge: 15 * 60,
-});
-
-const rateLimitedResendProvider: ReturnType<typeof Resend> = {
-  ...resendProvider,
-  async sendVerificationRequest(params) {
-    if (!(await isMagicLinkRequestAllowed(params.identifier))) {
-      throw new Error("Magic link request limit exceeded.");
-    }
-
-    await resendProvider.sendVerificationRequest(params);
-  },
-};
-
-const invitationOnlyAdapter: Adapter = {
-  ...prismaAdapter,
-  async createUser() {
-    throw new Error("An account invitation is required before sign-in.");
-  },
-  async getUserByEmail(email) {
-    return prisma.user.findUnique({
-      where: { emailNormalized: email.trim().toLowerCase() },
-    });
-  },
-};
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   trustHost: true,
-  adapter: invitationOnlyAdapter,
-  providers: [rateLimitedResendProvider],
+  providers: [
+    Credentials({
+      name: "SOUCLOU",
+      credentials: {
+        username: { label: "Nom d’utilisateur", type: "text" },
+        password: { label: "Mot de passe", type: "password" },
+      },
+      async authorize(credentials) {
+        const username = normalizeUsername(String(credentials?.username ?? ""));
+        const password = String(credentials?.password ?? "");
+
+        if (!username || !password) {
+          return null;
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { usernameNormalized: username },
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            email: true,
+            status: true,
+            passwordHash: true,
+          },
+        });
+
+        if (!user || !user.passwordHash || user.status === "SUSPENDED") {
+          return null;
+        }
+
+        const isValid = await verifyPassword(password, user.passwordHash);
+
+        if (!isValid) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          name: user.name ?? user.username ?? user.email,
+          email: user.email,
+          status: user.status,
+        };
+      },
+    }),
+  ],
   session: { strategy: "jwt" },
   pages: {
     signIn: "/connexion",
-    verifyRequest: "/connexion/verifier",
     error: "/connexion",
   },
   callbacks: {
+    async jwt({ token, user }) {
+      if (user && "status" in user) {
+        token.status = user.status;
+      }
+
+      return token;
+    },
     async signIn({ user }) {
       if (!user.id) {
         return false;
@@ -56,23 +74,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         where: { id: user.id },
         select: {
           status: true,
-          organizationMemberships: {
-            where: { status: { in: ["PENDING", "ACTIVE"] } },
-            select: { id: true },
-          },
-          schoolMemberships: {
-            where: { status: { in: ["PENDING", "ACTIVE"] } },
-            select: { id: true },
-          },
         },
       });
 
-      return (
-        account !== null &&
-        account.status !== "SUSPENDED" &&
-        (account.organizationMemberships.length > 0 ||
-          account.schoolMemberships.length > 0)
-      );
+      return account !== null && account.status !== "SUSPENDED";
     },
     async session({ session, token }) {
       if (!token.sub) {

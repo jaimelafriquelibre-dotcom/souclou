@@ -15,8 +15,7 @@
     "db:validate": "prisma validate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:bootstrap": "tsx scripts/bootstrap.ts",
-    "email:test": "tsx scripts/test-resend.ts"
+    "db:bootstrap": "tsx scripts/bootstrap.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -27,7 +26,6 @@
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "resend": "^6.35.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

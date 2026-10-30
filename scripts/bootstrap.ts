@@ -2,10 +2,13 @@ import { config as loadEnv } from "dotenv";
 import { Prisma } from "../src/generated/prisma/client";
 import type { PrismaClient } from "../src/generated/prisma/client";
 import { z } from "zod";
+import { hashPassword, normalizeUsername } from "../src/lib/password";
 
 loadEnv({ path: [".env.local", ".env"] });
 
 const bootstrapSchema = z.object({
+  username: z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/),
+  password: z.string().min(8).max(128),
   email: z.string().trim().toLowerCase().email(),
   name: z.string().trim().min(1).max(120),
   organizationName: z.string().trim().min(1).max(160),
@@ -21,6 +24,8 @@ const bootstrapSchema = z.object({
 
 function getBootstrapInput() {
   const parsed = bootstrapSchema.safeParse({
+    username: process.env.BOOTSTRAP_USERNAME,
+    password: process.env.BOOTSTRAP_PASSWORD,
     email: process.env.BOOTSTRAP_EMAIL,
     name: process.env.BOOTSTRAP_NAME,
     organizationName: process.env.BOOTSTRAP_ORGANIZATION,
@@ -56,11 +61,27 @@ async function bootstrap(prisma: PrismaClient, input: z.infer<typeof bootstrapSc
         throw new Error("The bootstrap e-mail already belongs to an account.");
       }
 
+      const normalizedUsername = normalizeUsername(input.username);
+
+      if (
+        await transaction.user.findUnique({
+          where: { usernameNormalized: normalizedUsername },
+          select: { id: true },
+        })
+      ) {
+        throw new Error("The bootstrap username is already in use.");
+      }
+
+      const passwordHash = await hashPassword(input.password);
+
       const user = await transaction.user.create({
         data: {
           name: input.name,
+          username: input.username,
+          usernameNormalized: normalizedUsername,
           email: input.email,
           emailNormalized: input.email,
+          passwordHash,
           status: "ACTIVE",
         },
       });
@@ -100,7 +121,9 @@ async function bootstrap(prisma: PrismaClient, input: z.infer<typeof bootstrapSc
   );
 
   console.info("Initial founder, organization, and school created.");
-  console.info("The founder can sign in using the configured e-mail address.");
+  console.info(
+    "The founder can sign in using the configured username and password.",
+  );
 }
 
 async function main() {
