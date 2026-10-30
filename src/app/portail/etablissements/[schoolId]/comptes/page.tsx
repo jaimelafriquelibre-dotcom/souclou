@@ -76,7 +76,7 @@ async function SchoolAccountsContent({
     notFound();
   }
 
-  const [pendingMemberships, invitableRoles] = await Promise.all([
+  const [pendingMemberships, approvableRoles] = await Promise.all([
     prisma.schoolMembership.findMany({
       where: { schoolId, status: "PENDING" },
       orderBy: { createdAt: "asc" },
@@ -93,12 +93,12 @@ async function SchoolAccountsContent({
     <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950">
       <section className="mx-auto w-full max-w-6xl">
         <PortalPageHeader
-          description="Invitez des comptes par adresse e-mail et approuvez uniquement les appartenances de cet établissement. Les actions sont journalisées."
+          description="Examinez et approuvez les demandes d’accès soumises par les utilisateurs. Les actions sont journalisées et limitées à cet établissement."
           eyebrow={school.organization.name}
           title={`Accès de ${school.name}`}
         />
         <AccountManagement
-          invitableRoles={invitableRoles}
+          approvableRoles={approvableRoles}
           pendingMemberships={pendingMemberships}
           schoolId={schoolId}
         />

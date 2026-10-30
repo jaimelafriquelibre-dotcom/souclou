@@ -47,9 +47,18 @@ Prisma est généré automatiquement à l'installation.
 
 La première organisation et son fondateur se créent une seule fois après la
 migration. Renseigner les variables `BOOTSTRAP_*` décrites ci-dessous avant
-d'exécuter `db:bootstrap`. Le fondateur se connecte avec son nom
+d'exécuter `db:bootstrap`. Si une organisation existe déjà, cette commande
+met à jour les identifiants du seul fondateur actif existant sans modifier
+l'organisation; dans ce cas seuls `BOOTSTRAP_USERNAME` et
+`BOOTSTRAP_PASSWORD` sont nécessaires. Le fondateur se connecte avec son nom
 d'utilisateur et son mot de passe. L'opération est transactionnelle et refuse
-une base qui contient déjà une organisation.
+une base sans fondateur unique ou un compte fondateur suspendu.
+
+Pour récupérer le fondateur de production, renseigner la connexion PostgreSQL
+à jour et `BOOTSTRAP_USERNAME` / `BOOTSTRAP_PASSWORD` dans `.env`, puis exécuter
+`npm.cmd run db:bootstrap:production`. Cette commande ne charge pas
+`.env.local` et utilise `DATABASE_URL_UNPOOLED` si elle est renseignée. Ne
+transmettre ni mot de passe ni URL de base dans un message ou un journal.
 
 ## Contrôles
 

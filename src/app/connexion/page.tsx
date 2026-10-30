@@ -1,11 +1,46 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { connection } from "next/server";
 import { SignInForm } from "@/app/connexion/sign-in-form";
+import { prisma } from "@/server/db";
 
 export const metadata: Metadata = {
   title: "Connexion — SOUCLOU",
 };
 
 export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <main
+          aria-busy="true"
+          className="home-page flex min-h-screen items-center justify-center px-6 text-slate-600"
+          role="status"
+        >
+          Chargement des établissements…
+        </main>
+      }
+    >
+      <SignInContent />
+    </Suspense>
+  );
+}
+
+async function SignInContent() {
+  await connection();
+  const schools = await prisma.school.findMany({
+    where: {
+      status: "ACTIVE",
+      organization: { status: "ACTIVE" },
+    },
+    orderBy: [{ organization: { name: "asc" } }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      organization: { select: { name: true } },
+    },
+  });
+
   return (
     <main className="home-page flex min-h-screen items-center px-6 py-12 sm:py-16">
       <section
@@ -26,7 +61,13 @@ export default function SignInPage() {
           Les comptes sont créés par l’utilisateur puis approuvés par
           l’administration avant tout accès au portail.
         </p>
-        <SignInForm />
+        <SignInForm
+          schools={schools.map((school) => ({
+            id: school.id,
+            name: school.name,
+            organizationName: school.organization.name,
+          }))}
+        />
       </section>
     </main>
   );

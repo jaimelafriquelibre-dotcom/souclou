@@ -2,6 +2,7 @@
 
 import { AuthError } from "next-auth";
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
 import { hashPassword, normalizeUsername } from "@/lib/password";
 import { prisma } from "@/server/db";
 import { signIn } from "../../../auth";
@@ -21,6 +22,15 @@ const registerSchema = z.object({
   username: z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/),
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8).max(128),
+  schoolId: z.string().min(1),
+  role: z.enum([
+    "STUDIES_DIRECTOR",
+    "EDUCATOR",
+    "ADMINISTRATIVE_STAFF",
+    "TEACHER",
+    "STUDENT",
+    "GUARDIAN",
+  ]),
 });
 
 export async function signInWithCredentials(
@@ -66,6 +76,8 @@ export async function registerAccount(
     username: formData.get("username"),
     email: formData.get("email"),
     password: formData.get("password"),
+    schoolId: formData.get("schoolId"),
+    role: formData.get("role"),
   });
 
   if (!parsedRegistration.success) {
@@ -75,38 +87,83 @@ export async function registerAccount(
   }
 
   const normalizedUsername = normalizeUsername(parsedRegistration.data.username);
-
-  const existingUser = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { usernameNormalized: normalizedUsername },
-        { emailNormalized: parsedRegistration.data.email },
-      ],
-    },
-    select: { id: true, usernameNormalized: true, emailNormalized: true },
-  });
-
-  if (existingUser?.usernameNormalized === normalizedUsername) {
-    return { error: "Ce nom d’utilisateur est déjà utilisé." };
-  }
-
-  if (existingUser?.emailNormalized === parsedRegistration.data.email) {
-    return { error: "Cette adresse e-mail est déjà associée à un compte." };
-  }
-
   const passwordHash = await hashPassword(parsedRegistration.data.password);
 
-  await prisma.user.create({
-    data: {
-      name: parsedRegistration.data.name,
-      username: parsedRegistration.data.username,
-      usernameNormalized: normalizedUsername,
-      email: parsedRegistration.data.email,
-      emailNormalized: parsedRegistration.data.email,
-      passwordHash,
-      status: "PENDING",
-    },
-  });
+  try {
+    await prisma.$transaction(
+      async (transaction) => {
+        const school = await transaction.school.findFirst({
+          where: {
+            id: parsedRegistration.data.schoolId,
+            status: "ACTIVE",
+            organization: { status: "ACTIVE" },
+          },
+          select: { id: true },
+        });
+
+        if (!school) {
+          throw new Error("REGISTRATION_SCHOOL_UNAVAILABLE");
+        }
+
+        const existingUser = await transaction.user.findFirst({
+          where: {
+            OR: [
+              { usernameNormalized: normalizedUsername },
+              { emailNormalized: parsedRegistration.data.email },
+            ],
+          },
+          select: { usernameNormalized: true, emailNormalized: true },
+        });
+
+        if (existingUser) {
+          throw new Error("REGISTRATION_CREDENTIALS_TAKEN");
+        }
+
+        await transaction.user.create({
+          data: {
+            name: parsedRegistration.data.name,
+            username: parsedRegistration.data.username,
+            usernameNormalized: normalizedUsername,
+            email: parsedRegistration.data.email,
+            emailNormalized: parsedRegistration.data.email,
+            passwordHash,
+            status: "PENDING",
+            schoolMemberships: {
+              create: {
+                schoolId: school.id,
+                role: parsedRegistration.data.role,
+                status: "PENDING",
+              },
+            },
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message === "REGISTRATION_SCHOOL_UNAVAILABLE") {
+      return { error: "Cet établissement n’est plus disponible." };
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "REGISTRATION_CREDENTIALS_TAKEN"
+    ) {
+      return {
+        error:
+          "Le nom d’utilisateur ou l’adresse e-mail est déjà utilisé. Vérifiez vos informations.",
+      };
+    }
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { error: "Le nom d’utilisateur ou l’adresse e-mail est déjà utilisé." };
+    }
+
+    throw error;
+  }
 
   return {
     success:

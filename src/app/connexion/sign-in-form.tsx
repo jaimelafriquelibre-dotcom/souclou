@@ -9,7 +9,22 @@ import {
 
 const initialState: SignInState = {};
 
-export function SignInForm() {
+type RegistrationSchool = {
+  id: string;
+  name: string;
+  organizationName: string;
+};
+
+const requestedRoles = [
+  ["STUDIES_DIRECTOR", "Direction des études"],
+  ["EDUCATOR", "Éducateur"],
+  ["ADMINISTRATIVE_STAFF", "Personnel administratif"],
+  ["TEACHER", "Enseignant"],
+  ["STUDENT", "Élève / étudiant"],
+  ["GUARDIAN", "Parent / tuteur"],
+] as const;
+
+export function SignInForm({ schools }: { schools: RegistrationSchool[] }) {
   const [signInState, signInAction, signInPending] = useActionState(
     signInWithCredentials,
     initialState,
@@ -124,6 +139,48 @@ export function SignInForm() {
             />
           </div>
           <div>
+            <label className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base" htmlFor="register-school">
+              Établissement
+            </label>
+            <select
+              className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
+              defaultValue=""
+              id="register-school"
+              name="schoolId"
+              required
+            >
+              <option disabled value="">
+                Choisir un établissement
+              </option>
+              {schools.map((school) => (
+                <option key={school.id} value={school.id}>
+                  {school.organizationName} · {school.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base" htmlFor="register-role">
+              Rôle demandé
+            </label>
+            <select
+              className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
+              defaultValue=""
+              id="register-role"
+              name="role"
+              required
+            >
+              <option disabled value="">
+                Choisir un rôle
+              </option>
+              {requestedRoles.map(([role, label]) => (
+                <option key={role} value={role}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="mb-3 block text-sm font-medium text-[#b6c6d9] md:text-base" htmlFor="register-password">
               Mot de passe
             </label>
@@ -148,12 +205,17 @@ export function SignInForm() {
           ) : null}
           <button
             className="landing-cta flex min-h-14 w-full items-center justify-center rounded-lg px-6 py-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={registerPending}
+            disabled={registerPending || schools.length === 0}
             type="submit"
           >
             {registerPending ? "Création…" : "Créer mon compte"}
             <span aria-hidden="true">→</span>
           </button>
+          {schools.length === 0 ? (
+            <p className="text-sm text-rose-300" role="status">
+              Aucun établissement n’accepte actuellement les demandes de compte.
+            </p>
+          ) : null}
         </form>
       </div>
     </section>
