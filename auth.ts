@@ -1,12 +1,52 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Resend from "next-auth/providers/resend";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import { normalizeUsername, verifyPassword } from "@/lib/password";
+import {
+  clearCredentialAttempts,
+  consumeCredentialAttempt,
+} from "@/server/credential-rate-limit";
 import { prisma } from "@/server/db";
+import { isResendConfigured } from "@/lib/resend-config";
+
+const baseAdapter = PrismaAdapter(prisma);
+const adapter = {
+  ...baseAdapter,
+  async createUser(data: Parameters<NonNullable<typeof baseAdapter.createUser>>[0]) {
+    return prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        emailNormalized: data.email.trim().toLowerCase(),
+        emailVerified: data.emailVerified,
+        image: data.image,
+        status: "PENDING",
+      },
+    });
+  },
+  async updateUser(data: Parameters<NonNullable<typeof baseAdapter.updateUser>>[0]) {
+    const { id, email, ...updates } = data;
+    return prisma.user.update({
+      where: { id },
+      data: {
+        ...updates,
+        ...(email
+          ? { email, emailNormalized: email.trim().toLowerCase() }
+          : {}),
+      },
+    });
+  },
+};
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
+  adapter,
   trustHost: true,
   providers: [
+    ...(isResendConfigured(process.env)
+      ? [Resend({ apiKey: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM })]
+      : []),
     Credentials({
       name: "SOUCLOU",
       credentials: {
@@ -17,7 +57,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const username = normalizeUsername(String(credentials?.username ?? ""));
         const password = String(credentials?.password ?? "");
 
-        if (!username || !password) {
+        if (
+          !/^[a-z0-9._-]{3,32}$/.test(username) ||
+          password.length < 8 ||
+          password.length > 128
+        ) {
+          return null;
+        }
+
+        if (!(await consumeCredentialAttempt(username))) {
           return null;
         }
 
@@ -42,6 +90,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!isValid) {
           return null;
         }
+
+        await clearCredentialAttempts(username);
 
         return {
           id: user.id,

@@ -10,16 +10,16 @@ de l'hébergeur. Elle ne constitue pas une attestation de conformité.
   le périmètre d'organisation, d'établissement et les rôles côté serveur.
 - Les changements sensibles et certains exports sont inscrits au journal
   d'audit ; les exports CSV neutralisent les formules de tableur.
-- Les liens de connexion expirent après 15 minutes. Leur émission est limitée à
-  3 demandes par adresse et par fenêtre de 15 minutes, avec un plafond global
-  configurable (défaut : 300 par fenêtre). Les clés de quota sont des HMAC ; les
-  compteurs expirés sont purgés après 24 heures. Le contrôle est effectué dans
-  le callback Resend, y compris pour les appels directs à Auth.js.
+- Les connexions credentials sont limitées à 8 tentatives par nom d'utilisateur
+  normalisé et par fenêtre de 15 minutes. Les clés de quota sont des HMAC ; les
+  compteurs inactifs depuis 24 heures sont purgés. Une protection complémentaire
+  par IP reste à activer au niveau du proxy/CDN de confiance.
 - Les headers `nosniff`, `X-Frame-Options`, `Referrer-Policy` et
   `Permissions-Policy` sont configurés. HSTS est envoyé en environnement de
   production.
-- Les migrations sont versionnées et le bootstrap refuse une base déjà
-  initialisée.
+- Les migrations sont versionnées. Le bootstrap crée le premier fondateur et
+  peut réinitialiser les credentials d'un fondateur unique déjà existant, sans
+  recréer son organisation.
 
 ## Décisions réglementaires à verser au dépôt
 
@@ -37,8 +37,9 @@ exigences vérifiables :
   la suppression ou l'archivage des données et les demandes des familles.
 - Règles pour les mineurs, les représentants légaux, le rattachement familial et
   les communications d'informations scolaires.
-- Pays et régions de traitement, transferts éventuels, sous-traitants, contrats
-  de traitement et traitement des données par le fournisseur e-mail.
+- Pays et régions de traitement, transferts éventuels, sous-traitants et
+  contrats de traitement, y compris pour les services de notifications externes
+  éventuellement retenus.
 - Notice d'information approuvée, contact de confidentialité et procédure
   d'incident, y compris les délais de notification applicables.
 
@@ -57,13 +58,12 @@ dans Git, les journaux ou les prompts :
   Configurer la limitation par IP à cette frontière ; ne pas se fier à un
   `X-Forwarded-For` fourni directement par un client.
 - Secrets de production dans le gestionnaire de secrets : `DATABASE_URL`,
-  `AUTH_SECRET`, `AUTH_URL`, `AUTH_RESEND_KEY`, `EMAIL_FROM` et, en multi-instance,
-  `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable pour le même build.
-- Valeurs retenues pour `MAGIC_LINK_WINDOW_MS`,
-  `MAGIC_LINK_PER_EMAIL_LIMIT`, `MAGIC_LINK_GLOBAL_LIMIT` et
-  `MAGIC_LINK_RETENTION_MS`, cohérentes avec le trafic et le contrat du
-  fournisseur d'e-mail.
-- Domaine expéditeur Resend vérifié et destinataires de test approuvés.
+  `DATABASE_URL_UNPOOLED` pour les migrations si le fournisseur la propose,
+  `AUTH_SECRET` et `AUTH_URL`. En multi-instance, conserver une valeur stable de
+  `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` pour un même build.
+- Variables `BOOTSTRAP_USERNAME` et `BOOTSTRAP_PASSWORD` configurées
+  temporairement et de façon sécurisée pour créer ou récupérer le fondateur;
+  ne pas les conserver dans les logs ni les committer.
 - Compte de déploiement, accès au dépôt GitHub et méthode de déploiement
   (CI/CD ou procédure manuelle). Le push du code ne crée pas l'infrastructure.
 - Politique de sauvegardes chiffrées, rétention, objectifs RPO/RTO et preuve d'un
@@ -90,11 +90,11 @@ dans Git, les journaux ou les prompts :
 1. Consigner et faire relire les décisions réglementaires ci-dessus.
 2. Choisir et valider l'hébergement, la région de base, les sous-traitants et
    les transferts.
-3. Configurer TLS, proxy/CDN, limitation par IP, secrets, domaine e-mail et
-   sauvegardes dans les systèmes de l'opérateur.
-4. Appliquer les migrations avec `npm.cmd run db:deploy` et créer le compte
-   initial avec les secrets injectés dans l'environnement de déploiement.
-5. Tester en préproduction les accès refusés, l'isolation inter-écoles, les
-   quotas, les exports, l'envoi d'e-mail, les alertes et la restauration.
+3. Configurer TLS, proxy/CDN, limitation par IP, secrets, bootstrap du fondateur
+  et sauvegardes dans les systèmes de l'opérateur.
+4. Appliquer les migrations avec `npm.cmd run db:deploy` et créer ou récupérer
+  le compte fondateur avec des secrets injectés de façon temporaire.
+5. Tester en préproduction les accès refusés, l'isolation inter-écoles, le quota
+  credentials, les exports, les notifications internes et la restauration.
 6. Faire valider les tests d'acceptation et les notices avant d'importer toute
    donnée réelle.

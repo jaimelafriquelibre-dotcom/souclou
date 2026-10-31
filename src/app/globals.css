@@ -1508,6 +1508,92 @@ summary {
   animation: content-arrive 550ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
+.founder-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.founder-overview article {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #d5e0e8;
+  border-left: 4px solid #0f766e;
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px 18px;
+}
+
+.founder-overview span {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.founder-overview strong {
+  color: #0f172a;
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.founder-activity {
+  margin-top: 28px;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 18px;
+}
+
+.founder-activity h2 {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.founder-activity ol {
+  margin-top: 10px;
+  padding: 0;
+}
+
+.founder-activity li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 20px;
+  border-bottom: 1px solid #dbe3eb;
+  padding: 12px 0;
+}
+
+.founder-activity li > div {
+  display: grid;
+  gap: 4px;
+}
+
+.founder-activity strong {
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.founder-activity span,
+.founder-activity time {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.founder-activity-meta {
+  text-align: right;
+}
+
+.founder-activity-empty {
+  margin: 0;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 18px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .portal-page-header {
   position: relative;
   isolation: isolate;
@@ -1677,6 +1763,33 @@ summary {
   height: 3px;
   background: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa, #fb7185);
   content: "";
+}
+
+.portal-school-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 125px), 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.portal-school-metrics div {
+  min-width: 0;
+  border-radius: 6px;
+  background: #f1f5f9;
+  padding: 10px 12px;
+}
+
+.portal-school-metrics dt {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.portal-school-metrics dd {
+  margin-top: 4px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .portal-simple-school:nth-child(3n + 2)::before {

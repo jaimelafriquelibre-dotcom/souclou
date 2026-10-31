@@ -3,9 +3,16 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { SignInForm } from "@/app/connexion/sign-in-form";
 import { prisma } from "@/server/db";
+import { isResendConfigured } from "@/lib/resend-config";
 
 export const metadata: Metadata = {
   title: "Connexion — SOUCLOU",
+};
+
+type AvailableSchool = {
+  id: string;
+  name: string;
+  organization: { name: string };
 };
 
 export default function SignInPage() {
@@ -28,7 +35,10 @@ export default function SignInPage() {
 
 async function SignInContent() {
   await connection();
-  const schools = await prisma.school.findMany({
+  let databaseAvailable = true;
+  let schools: AvailableSchool[] = [];
+  try {
+    schools = await prisma.school.findMany({
     where: {
       status: "ACTIVE",
       organization: { status: "ACTIVE" },
@@ -39,7 +49,10 @@ async function SignInContent() {
       name: true,
       organization: { select: { name: true } },
     },
-  });
+    });
+  } catch {
+    databaseAvailable = false;
+  }
 
   return (
     <main className="home-page flex min-h-screen items-center px-6 py-12 sm:py-16">
@@ -62,6 +75,8 @@ async function SignInContent() {
           l’administration avant tout accès au portail.
         </p>
         <SignInForm
+          databaseAvailable={databaseAvailable}
+          emailSignInEnabled={isResendConfigured(process.env)}
           schools={schools.map((school) => ({
             id: school.id,
             name: school.name,

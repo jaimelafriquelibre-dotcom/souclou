@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: souclou-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: souclou
+      POSTGRES_PASSWORD: ${SOUCLOU_POSTGRES_PASSWORD:-change-me-locally}
+      POSTGRES_DB: souclou
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - souclou_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U souclou -d souclou"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  souclou_pgdata:

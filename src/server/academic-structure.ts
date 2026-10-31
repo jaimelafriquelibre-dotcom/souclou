@@ -5,6 +5,7 @@ import { z } from "zod";
 import { appendAuditEvent } from "@/server/audit";
 import { prisma } from "@/server/db";
 import { canUserPerformInSchoolUsing } from "@/server/permissions";
+import { canTransitionAcademicYear } from "@/lib/academic-year-rules";
 
 export type AcademicStructureErrorCode =
   | "FORBIDDEN"
@@ -265,11 +266,7 @@ export async function updateAcademicYearStatus(
         );
       }
 
-      const allowedTransition =
-        (academicYear.status === "PLANNED" && nextStatus === "ACTIVE") ||
-        (academicYear.status === "ACTIVE" && nextStatus === "CLOSED");
-
-      if (!allowedTransition) {
+      if (!canTransitionAcademicYear(academicYear.status, nextStatus)) {
         throw new AcademicStructureError(
           "INVALID_STATE",
           "Cette transition d’année scolaire n’est pas autorisée.",

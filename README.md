@@ -8,7 +8,7 @@ en cours de construction. Aucune donnée réelle d'élève ne doit y être ajout
 - Next.js App Router, React et TypeScript strict
 - Tailwind CSS
 - PostgreSQL et Prisma
-- Auth.js avec identifiants utilisateur et validation manuelle du compte
+- Auth.js avec identifiants locaux, lien e-mail Resend optionnel et validation manuelle du compte
 - ESLint, vérification TypeScript et Vitest
 - Interface française (`fr-CI`) et fuseau par défaut `Africa/Abidjan`
 
@@ -62,6 +62,16 @@ transmettre ni mot de passe ni URL de base dans un message ou un journal.
 
 ## Contrôles
 
+Pour démarrer PostgreSQL localement avec la composition fournie :
+
+```powershell
+docker compose up -d postgres
+```
+
+Le service écoute uniquement sur `127.0.0.1:55432` et utilise le volume
+`souclou_pgdata`. Remplacez le mot de passe d’exemple dans `.env.local` avant
+les migrations ; n’utilisez jamais de données réelles dans cet environnement.
+
 ```powershell
 npm.cmd run lint
 npm.cmd run typecheck
@@ -72,6 +82,11 @@ npm.cmd run build
 ```
 
 ## Variables d'environnement
+
+La connexion par identifiants locaux fonctionne sans fournisseur e-mail. Pour
+activer les liens de connexion Resend, renseigner `RESEND_API_KEY` et
+`RESEND_FROM` dans l'environnement local ou de production. Ces valeurs restent
+des secrets et ne doivent jamais être ajoutées au dépôt.
 
 Renseigner localement `DATABASE_URL`, `AUTH_SECRET` et `AUTH_URL` pour activer
 la connexion par identifiants. Le bootstrap utilise `BOOTSTRAP_USERNAME`,
@@ -107,8 +122,8 @@ contiennent pas les noms d'élèves. La migration initiale empêche les
 modifications/suppressions du journal et rattache chaque entrée d'établissement
 à la bonne organisation.
 
-direction des études et d'éducateur, qui disposent du pouvoir d'approbation des
-Auth.js utilise des identifiants locaux sans e-mail ni SMS. Créer le
+Auth.js utilise les identifiants locaux par défaut et peut utiliser les liens
+Resend lorsque les variables correspondantes sont configurées. Créer le
 fondateur initial avec la commande de bootstrap ; les comptes suivants sont
 créés par l'utilisateur avec nom d'utilisateur et mot de passe puis sont
 approuvés par l'administration avant d'accéder au portail. Seul un fondateur
@@ -138,16 +153,17 @@ retrait/rétablissement d'une inscription et l'archivage/restauration d'un
 élève ; l'archivage désactive les inscriptions et les liens familiaux actifs
 sans effacer l'historique.
 
-Le produit cible la Côte d'Ivoire. Les identifiants sont stockés avec un hachage
-sécurisé et les comptes en attente d'approbation restent bloqués jusqu'à
-validation. Les headers de sécurité de base sont configurés dans Next.js. Une
-limitation par IP doit encore être activée au niveau du proxy/CDN de confiance
-choisi pour la production.
-
+Le produit cible la Côte d'Ivoire. Les mots de passe sont stockés avec un
+hachage sécurisé et les tentatives de connexion sont limitées par username.
+Les comptes en attente restent bloqués jusqu'à validation. Les headers de
+sécurité de base sont configurés dans Next.js. Une limitation complémentaire
+par IP doit encore être activée au niveau du proxy/CDN de confiance choisi
+pour la production.
 Les décisions juridiques peuvent être établies hors du dépôt, mais leurs
 références, durées de conservation, bases légales, règles concernant les
 mineurs et transferts doivent être consignés avant de qualifier l'application
 de conforme. Le détail des entrées nécessaires et des opérations restant à
 configurer est suivi dans [docs/production-readiness.md](docs/production-readiness.md).
-En attendant leur intégration et le choix d'un hébergement validé, garder
-l'application locale et n'utiliser que des données fictives.
+En attendant leur intégration et la validation de l'hébergement, ne pas utiliser
+de données réelles ni ouvrir l'application à des établissements sans validation
+opérationnelle et réglementaire.

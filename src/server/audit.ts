@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
+import { containsSensitiveAuditKey } from "@/lib/audit-safety";
 
 export type AuditEvent = {
   organizationId: string;
@@ -18,6 +19,10 @@ export function appendAuditEvent(
   transaction: Prisma.TransactionClient,
   event: AuditEvent,
 ) {
+  if (containsSensitiveAuditKey(event.before) || containsSensitiveAuditKey(event.after)) {
+    throw new Error("AUDIT_PAYLOAD_CONTAINS_SENSITIVE_FIELD");
+  }
+
   return transaction.auditLog.create({
     data: {
       organizationId: event.organizationId,

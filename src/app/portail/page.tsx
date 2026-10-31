@@ -5,6 +5,8 @@ import { connection } from "next/server";
 import { auth } from "../../../auth";
 import { PortalPageHeader } from "@/app/portail/page-header";
 import { prisma } from "@/server/db";
+import { getFounderDashboardSummaryUsing } from "@/server/founder-dashboard";
+import { SchoolCreationForm } from "@/app/portail/school-creation-form";
 
 export default function PortalPage() {
   return (
@@ -38,7 +40,7 @@ async function PortalContent() {
 
   const [
     schoolMemberships,
-    organizationMemberships,
+    founderDashboard,
     teacherAssignmentSchoolIds,
     unreadNotifications,
   ] = await Promise.all([
@@ -62,28 +64,7 @@ async function PortalContent() {
         },
       },
     }),
-    prisma.organizationMembership.findMany({
-      where: {
-        userId: session.user.id,
-        role: "FOUNDER",
-        status: "ACTIVE",
-        organization: {
-          status: "ACTIVE",
-          schools: { some: { status: "ACTIVE" } },
-        },
-      },
-      select: {
-        organization: {
-          select: {
-            name: true,
-            schools: {
-              where: { status: "ACTIVE" },
-              select: { id: true, name: true },
-            },
-          },
-        },
-      },
-    }),
+    getFounderDashboardSummaryUsing(prisma, session.user.id),
     prisma.classTeachingAssignment.findMany({
       where: {
         teacherUserId: session.user.id,
@@ -124,11 +105,9 @@ async function PortalContent() {
     }),
   ]);
 
-  const founderSchools = organizationMemberships.flatMap((membership) =>
-    membership.organization.schools.map((school) => ({
-      ...school,
-      organizationName: membership.organization.name,
-    })),
+  const founderSchools = founderDashboard.schools;
+  const founderSchoolMetrics = new Map(
+    founderSchools.map((school) => [school.id, school.metrics]),
   );
   const schoolAccess = new Map<
     string,
@@ -168,25 +147,89 @@ async function PortalContent() {
     STUDENT: "Élève",
     GUARDIAN: "Parent / tuteur",
   };
+  const activityActionLabels: Record<string, string> = {
+    STUDENT_ENROLLED: "Nouvelle inscription",
+    STUDENT_RECORD_CORRECTED: "Dossier élève corrigé",
+    STUDENT_ARCHIVED: "Élève archivé",
+    STUDENT_RESTORED: "Élève restauré",
+    MEMBERSHIP_APPROVED: "Accès approuvé",
+    CLASS_ATTENDANCE_RECORDED: "Présences enregistrées",
+    GRADE_RECORDED: "Note enregistrée",
+    GRADE_CORRECTED: "Note corrigée",
+    PUBLICATION_SUBMITTED: "Publication soumise",
+    PUBLICATION_APPROVED: "Publication approuvée",
+    PUBLICATION_REJECTED: "Publication rejetée",
+  };
 
   return (
     <main className="portal-page min-h-screen px-5 py-8 text-slate-950 sm:px-8 sm:py-12">
       <section className="portal-content mx-auto w-full max-w-5xl">
         <PortalPageHeader
           action={
-            <Link className="portal-simple-notifications" href="/portail/notifications">
-              Notifications
-              {unreadNotifications > 0 ? (
-                <span aria-label={`${unreadNotifications} notification(s) non lue(s)`}>
-                  {unreadNotifications}
-                </span>
-              ) : null}
-            </Link>
+            <span className="flex flex-wrap gap-3">
+              <Link className="portal-simple-notifications" href="/portail/notifications">Notifications{unreadNotifications > 0 ? <span aria-label={`${unreadNotifications} notification(s) non lue(s)`}>{unreadNotifications}</span> : null}</Link>
+              {founderSchools.length > 0 ? <Link className="portal-simple-notifications" href="/portail/audit">Journal d’audit</Link> : null}
+              {founderDashboard.organizations.length > 0 ? <Link className="portal-simple-notifications" href="/portail/organisation">Organisations</Link> : null}
+            </span>
           }
           description="Choisissez un établissement pour retrouver les outils de votre quotidien."
           eyebrow="SOUCLOU · Espace de travail"
           title={`Bonjour${session.user.name ? `, ${session.user.name}` : ""}`}
         />
+
+        {founderSchools.length > 0 ? (
+          <section aria-label="Vue d’ensemble des établissements" className="founder-overview">
+            <article>
+              <span>Établissements actifs</span>
+              <strong>{founderDashboard.metrics.schoolCount}</strong>
+            </article>
+            <article>
+              <span>Élèves actifs</span>
+              <strong>{founderDashboard.metrics.activeStudentCount}</strong>
+            </article>
+            <article>
+              <span>Demandes d’accès</span>
+              <strong>{founderDashboard.metrics.pendingAccountCount}</strong>
+            </article>
+            <article>
+              <span>Publications à valider</span>
+              <strong>{founderDashboard.metrics.pendingPublicationCount}</strong>
+            </article>
+          </section>
+        ) : null}
+
+        <section aria-labelledby="founder-activity-heading" className="founder-activity">
+          <h2 id="founder-activity-heading">Activité récente</h2>
+          {founderDashboard.recentActivity.length > 0 ? (
+            <ol>
+              {founderDashboard.recentActivity.map((event) => (
+                <li key={event.id}>
+                  <div>
+                    <strong>
+                      {activityActionLabels[event.action] ??
+                        event.action.toLowerCase().replaceAll("_", " ")}
+                    </strong>
+                    <span>{event.school?.name ?? "Établissement indisponible"}</span>
+                  </div>
+                  <div className="founder-activity-meta">
+                    <span>{event.actor?.name ?? "Compte non identifié"}</span>
+                    <time dateTime={event.createdAt.toISOString()}>
+                      {new Intl.DateTimeFormat("fr-CI", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                        timeZone: "Africa/Abidjan",
+                      }).format(event.createdAt)}
+                    </time>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="founder-activity-empty">
+              Aucune opération récente n’est encore enregistrée pour vos établissements.
+            </p>
+          )}
+        </section>
 
         {schoolAccess.size > 0 ? (
           <ul className="portal-simple-schools mt-8 grid grid-cols-1 gap-5">
@@ -219,6 +262,14 @@ async function PortalContent() {
                   href: `/portail/etablissements/${school.id}/scolarite`,
                   label: "Scolarité",
                   tone: "amber",
+                },
+                {
+                  show: ["FOUNDER", "STUDIES_DIRECTOR"].some((role) =>
+                    school.roles.has(role),
+                  ),
+                  href: `/portail/etablissements/${school.id}/parametres`,
+                  label: "Paramètres",
+                  tone: "violet",
                 },
                 {
                   show: [
@@ -265,6 +316,22 @@ async function PortalContent() {
                       .map((role) => roleLabels[role] ?? role)
                       .join(" · ")}
                   </p>
+                  {founderSchoolMetrics.has(school.id) ? (
+                    <dl className="portal-school-metrics">
+                      <div>
+                        <dt>Élèves actifs</dt>
+                        <dd>{founderSchoolMetrics.get(school.id)?.activeStudentCount}</dd>
+                      </div>
+                      <div>
+                        <dt>Demandes d’accès</dt>
+                        <dd>{founderSchoolMetrics.get(school.id)?.pendingAccountCount}</dd>
+                      </div>
+                      <div>
+                        <dt>Publications à valider</dt>
+                        <dd>{founderSchoolMetrics.get(school.id)?.pendingPublicationCount}</dd>
+                      </div>
+                    </dl>
+                  ) : null}
                   <ul className="portal-simple-modules">
                     {links.map((item) => (
                       <li key={item.href}>
@@ -291,6 +358,7 @@ async function PortalContent() {
             </p>
           </div>
         )}
+        <SchoolCreationForm organizations={founderDashboard.organizations} />
       </section>
     </main>
   );

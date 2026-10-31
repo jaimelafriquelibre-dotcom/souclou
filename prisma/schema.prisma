@@ -519,3 +519,12 @@ model AuditLog {
   @@index([entityType, entityId])
 }
 
+model AuthRateLimit {
+  key             String   @id @db.VarChar(64)
+  attempts        Int
+  windowStartedAt DateTime
+  updatedAt       DateTime @updatedAt
+
+  @@index([updatedAt], map: "AuthRateLimit_updatedAt_idx")
+}
+

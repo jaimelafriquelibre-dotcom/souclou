@@ -76,7 +76,7 @@ async function SchoolAccountsContent({
     notFound();
   }
 
-  const [pendingMemberships, approvableRoles] = await Promise.all([
+  const [pendingMemberships, activeMemberships, approvableRoles] = await Promise.all([
     prisma.schoolMembership.findMany({
       where: { schoolId, status: "PENDING" },
       orderBy: { createdAt: "asc" },
@@ -85,6 +85,11 @@ async function SchoolAccountsContent({
         role: true,
         user: { select: { email: true, name: true } },
       },
+    }),
+    prisma.schoolMembership.findMany({
+      where: { schoolId, status: { in: ["ACTIVE", "SUSPENDED"] } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, role: true, status: true, user: { select: { email: true, name: true } } },
     }),
     getInvitableSchoolRoles(session.user.id, schoolId),
   ]);
@@ -100,6 +105,10 @@ async function SchoolAccountsContent({
         <AccountManagement
           approvableRoles={approvableRoles}
           pendingMemberships={pendingMemberships}
+          activeMemberships={activeMemberships.map((membership) => ({
+            ...membership,
+            status: membership.status as "ACTIVE" | "SUSPENDED",
+          }))}
           schoolId={schoolId}
         />
       </section>

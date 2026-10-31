@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { hashPassword, normalizeUsername } from "@/lib/password";
 import { prisma } from "@/server/db";
+import { isResendConfigured } from "@/lib/resend-config";
 import { signIn } from "../../../auth";
 
 export type SignInState = {
@@ -65,6 +66,25 @@ export async function signInWithCredentials(
   return {
     success: "Connexion réussie.",
   };
+}
+
+export async function signInWithEmail(
+  _previousState: SignInState,
+  formData: FormData,
+): Promise<SignInState> {
+  if (!isResendConfigured(process.env)) {
+    return { error: "La connexion par e-mail n’est pas activée sur cet environnement." };
+  }
+
+  const email = z.string().trim().toLowerCase().email().safeParse(formData.get("email"));
+  if (!email.success) return { error: "Adresse e-mail invalide." };
+  try {
+    await signIn("resend", { email: email.data, redirectTo: "/portail" });
+  } catch (error) {
+    if (error instanceof AuthError) return { error: "Le lien de connexion n’a pas pu être envoyé." };
+    throw error;
+  }
+  return { success: "Si ce compte est autorisé, un lien de connexion vient d’être envoyé." };
 }
 
 export async function registerAccount(

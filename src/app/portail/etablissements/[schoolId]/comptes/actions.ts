@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   MembershipServiceError,
   approveSchoolMember,
+  setSchoolMemberStatus,
 } from "@/server/memberships";
 import { requireActiveUserId } from "@/server/session";
 
@@ -27,6 +28,24 @@ function getServiceErrorMessage(error: MembershipServiceError) {
     case "INVALID_STATE":
       return error.message;
   }
+}
+
+export async function setSchoolMemberStatusAction(
+  _previousState: MembershipActionState,
+  formData: FormData,
+): Promise<MembershipActionState> {
+  const parsed = z.object({ schoolId: z.string().min(1), membershipId: z.string().min(1), status: z.enum(["ACTIVE", "SUSPENDED"]) }).safeParse({
+    schoolId: formData.get("schoolId"), membershipId: formData.get("membershipId"), status: formData.get("status"),
+  });
+  if (!parsed.success) return { error: "La transition d’appartenance est invalide." };
+  try {
+    await setSchoolMemberStatus(await requireActiveUserId(), parsed.data.schoolId, parsed.data.membershipId, parsed.data.status);
+  } catch (error) {
+    if (error instanceof MembershipServiceError) return { error: getServiceErrorMessage(error) };
+    throw error;
+  }
+  revalidatePath(`/portail/etablissements/${parsed.data.schoolId}/comptes`);
+  return { success: "L’appartenance a été mise à jour." };
 }
 
 export async function approveSchoolMemberAction(

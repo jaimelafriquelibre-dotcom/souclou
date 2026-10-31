@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import {
   approveSchoolMemberAction,
+  setSchoolMemberStatusAction,
   type MembershipActionState,
 } from "./actions";
 import type { SchoolRole } from "@/server/authorization";
@@ -20,6 +21,7 @@ type AccountManagementProps = {
   schoolId: string;
   approvableRoles: SchoolRole[];
   pendingMemberships: PendingMembership[];
+  activeMemberships: { id: string; role: SchoolRole; status: "ACTIVE" | "SUSPENDED"; user: { email: string; name: string | null } }[];
 };
 
 const initialState: MembershipActionState = {};
@@ -57,6 +59,7 @@ export function AccountManagement({
   schoolId,
   approvableRoles,
   pendingMemberships,
+  activeMemberships,
 }: AccountManagementProps) {
   return (
     <div className="mt-8">
@@ -97,8 +100,22 @@ export function AccountManagement({
           </ul>
         )}
       </section>
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold">Appartenances actives</h2>
+        <ul className="mt-4 divide-y divide-slate-200">
+          {activeMemberships.map((membership) => <li className="flex flex-wrap items-center justify-between gap-3 py-3" key={membership.id}>
+            <span>{membership.user.name ?? membership.user.email} · {roleLabels[membership.role]} · {membership.status === "ACTIVE" ? "Active" : "Suspendue"}</span>
+            <MembershipStatusButton membershipId={membership.id} schoolId={schoolId} status={membership.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE"} />
+          </li>)}
+        </ul>
+      </section>
     </div>
   );
+}
+
+function MembershipStatusButton({ schoolId, membershipId, status }: { schoolId: string; membershipId: string; status: "ACTIVE" | "SUSPENDED" }) {
+  const [state, formAction, pending] = useActionState(setSchoolMemberStatusAction, initialState);
+  return <form action={formAction}><input name="schoolId" type="hidden" value={schoolId} /><input name="membershipId" type="hidden" value={membershipId} /><input name="status" type="hidden" value={status} /><button className="rounded-lg border border-amber-700 px-3 py-2 text-sm font-semibold text-amber-900" disabled={pending} type="submit">{pending ? "Mise à jour…" : status === "SUSPENDED" ? "Suspendre" : "Réactiver"}</button><ActionMessage state={state} /></form>;
 }
 
 function ApproveMembershipButton({

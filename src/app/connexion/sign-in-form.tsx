@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import {
   registerAccount,
+  signInWithEmail,
   signInWithCredentials,
   type SignInState,
 } from "@/app/connexion/actions";
@@ -24,11 +25,20 @@ const requestedRoles = [
   ["GUARDIAN", "Parent / tuteur"],
 ] as const;
 
-export function SignInForm({ schools }: { schools: RegistrationSchool[] }) {
+export function SignInForm({
+  schools,
+  databaseAvailable,
+  emailSignInEnabled,
+}: {
+  schools: RegistrationSchool[];
+  databaseAvailable: boolean;
+  emailSignInEnabled: boolean;
+}) {
   const [signInState, signInAction, signInPending] = useActionState(
     signInWithCredentials,
     initialState,
   );
+  const [emailState, emailAction, emailPending] = useActionState(signInWithEmail, initialState);
   const [registerState, registerAction, registerPending] = useActionState(
     registerAccount,
     initialState,
@@ -92,6 +102,16 @@ export function SignInForm({ schools }: { schools: RegistrationSchool[] }) {
             <span aria-hidden="true">→</span>
           </button>
         </form>
+        {emailSignInEnabled ? <div className="mt-8 border-t border-slate-200/15 pt-6">
+          <h3 className="text-lg font-semibold text-[#eaf2fb]">Connexion par e-mail</h3>
+          <p className="mt-2 text-sm text-[#b6c6d9]">Utilisez le lien sécurisé envoyé à l’adresse d’un compte approuvé.</p>
+          <form action={emailAction} className="mt-4 grid gap-4">
+            <input autoComplete="email" className="w-full rounded-lg border border-slate-400/25 bg-slate-950/40 px-5 py-4 text-base text-white" name="email" placeholder="Adresse e-mail" required type="email" />
+            {emailState.error ? <p className="text-sm text-rose-300" role="alert">{emailState.error}</p> : null}
+            {emailState.success ? <p className="text-sm text-teal-200" role="status">{emailState.success}</p> : null}
+            <button className="rounded-lg border border-teal-300/50 px-4 py-3 font-semibold text-teal-100 disabled:opacity-60" disabled={emailPending} type="submit">{emailPending ? "Envoi…" : "Recevoir un lien"}</button>
+          </form>
+        </div> : null}
       </div>
 
       <div>
@@ -205,13 +225,17 @@ export function SignInForm({ schools }: { schools: RegistrationSchool[] }) {
           ) : null}
           <button
             className="landing-cta flex min-h-14 w-full items-center justify-center rounded-lg px-6 py-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={registerPending || schools.length === 0}
+            disabled={registerPending || !databaseAvailable || schools.length === 0}
             type="submit"
           >
             {registerPending ? "Création…" : "Créer mon compte"}
             <span aria-hidden="true">→</span>
           </button>
-          {schools.length === 0 ? (
+          {!databaseAvailable ? (
+            <p className="text-sm text-amber-700" role="status">
+              Le service est temporairement indisponible. Réessayez dans quelques instants.
+            </p>
+          ) : schools.length === 0 ? (
             <p className="text-sm text-rose-300" role="status">
               Aucun établissement n’accepte actuellement les demandes de compte.
             </p>
